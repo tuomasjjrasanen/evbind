@@ -1,0 +1,24 @@
+========
+ Evbind
+========
+
+Evbind is a daemon which monitors input event devices and executes
+arbitrary programs bound to individual events or event
+combinations. Programs can be bound to events with configuration files
+using simple syntax::
+
+  # Launch the default browser when KEY_WWW is pressed.
+  event_type == 0x01
+  event_code == 150
+  event_value == 1
+  action = /usr/bin/x-www-browser
+
+Configuration variables ``event_type``, ``event_code`` and
+``event_value`` correspond to fields in ``struct input_event`` as
+declared in ``/usr/include/linux/input.h``.
+
+======== =====================================================
+Author   Tuomas Jorma Juhani Räsänen <tuomasjjrasanen@tjjr.fi>
+Homepage http://tjjr.fi/sw/evbind/
+License  GPLv3+
+======== =====================================================
