@@ -1,0 +1,15 @@
+Source: evbind
+Section: utils
+Priority: extra
+Maintainer: Tuomas Jorma Juhani Räsänen <tuomasjjrasanen@tjjr.fi>
+Build-Depends: debhelper (>= 8.0.0), libudev-dev
+Standards-Version: 3.9.3
+Homepage: http://tjjr.fi/sw/evbind/
+
+Package: evbind
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}, libudev0
+Description: bind arbitrary commands to input device events
+ Evbind is a daemon which monitors input event devices and executes
+ arbitrary programs bound to individual events or event combinations.
+ .
