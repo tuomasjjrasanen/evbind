@@ -21,8 +21,10 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <syslog.h>
 
 extern char *program_invocation_name;
+extern char *program_invocation_short_name;
 
 static bool no_daemon = false;
 
@@ -98,5 +100,11 @@ static void evb_parse_args(int argc, char **argv)
 int main(int argc, char **argv)
 {
 	evb_parse_args(argc, argv);
+
+        openlog(program_invocation_short_name, LOG_ODELAY | LOG_PERROR,
+		LOG_DAEMON);
+
+        syslog(LOG_INFO, "terminated");
+
 	return 0;
 }
