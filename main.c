@@ -81,7 +81,7 @@ static void evb_parse_args(int argc, char **argv)
                                "Options:\n"
                                "     --no-daemon            do not run as a daemon process\n"
                                " -h, --help                 display this help and exit\n"
-                               " -V, --version              output version infromation and exit\n"
+                               " -V, --version              output version information and exit\n"
                                "\n"
                                "Processing information and error messages are always printed into syslog.\n"
                                "If evbind is not running as a daemon, logs are also printed into stderr.\n"
