@@ -18,10 +18,16 @@
 #include <getopt.h>
 #include <err.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <syslog.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
@@ -104,7 +110,68 @@ int main(int argc, char **argv)
         openlog(program_invocation_short_name, LOG_ODELAY | LOG_PERROR,
 		LOG_DAEMON);
 
+	if (!no_daemon) {
+		int fd_devnull;
+
+		switch (fork()) {
+		case 0:
+			break;
+		case -1:
+			syslog(LOG_ERR, "failed to fork: %s",
+			       strerror(errno));
+			return EXIT_FAILURE;
+		default:
+			_exit(0);
+		}
+
+		setsid();
+
+		switch (fork()) {
+		case 0:
+			break;
+		case -1:
+			syslog(LOG_ERR, "failed to double-fork: %s",
+			       strerror(errno));
+			return EXIT_FAILURE;
+		default:
+			_exit(0);
+		}
+
+		if (chdir("/") == -1) {
+			syslog(LOG_ERR, "failed to change working directory to /: %s",
+			       strerror(errno));
+			return EXIT_FAILURE;
+		}
+
+		fd_devnull = open("/dev/null", O_RDWR);
+		if (fd_devnull == -1) {
+			syslog(LOG_ERR, "failed to open /dev/null: %s",
+			       strerror(errno));
+			return EXIT_FAILURE;
+		}
+
+		if (dup2(fd_devnull, 0) == -1) {
+			syslog(LOG_ERR, "failed to redirect stdin to /dev/null: %s",
+			       strerror(errno));
+			return EXIT_FAILURE;
+		}
+
+		if (dup2(fd_devnull, 1) == -1) {
+			syslog(LOG_ERR, "failed to redirect stdout to /dev/null: %s",
+			       strerror(errno));
+			return EXIT_FAILURE;
+		}
+
+		if (dup2(fd_devnull, 2) == -1) {
+			syslog(LOG_ERR, "failed to redirect stderr to /dev/null: %s",
+			       strerror(errno));
+			return EXIT_FAILURE;
+		}
+
+		umask(0);
+	}
+
         syslog(LOG_INFO, "terminated");
 
-	return 0;
+	return EXIT_SUCCESS;
 }
