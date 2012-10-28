@@ -36,7 +36,7 @@ extern char *program_invocation_short_name;
 
 static bool no_daemon = false;
 
-static void evb_help_and_exit(void)
+static void evb_main_help_and_exit(void)
 {
         fprintf(stderr, "Try `%s --help' for more information.\n",
                 program_invocation_name);
@@ -92,7 +92,7 @@ static void evb_parse_args(int argc, char **argv)
 			       "\n", program_invocation_name);
                         exit(EXIT_SUCCESS);
                 case '?':
-                        evb_help_and_exit();
+                        evb_main_help_and_exit();
                 default:
                         errx(EXIT_FAILURE, "argument parsing failed");
                 }
@@ -101,7 +101,7 @@ static void evb_parse_args(int argc, char **argv)
         if (optind != argc) {
                 fprintf(stderr, "%s: wrong number of arguments\n",
                         program_invocation_name);
-                evb_help_and_exit();
+                evb_main_help_and_exit();
         }
 }
 
