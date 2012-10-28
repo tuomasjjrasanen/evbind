@@ -40,7 +40,7 @@ void evb_err_clr(struct evb_err *const err)
 {
         /* Safe: str is always null terminated */
 	memset(err->str, 0, strlen(err->str));
-	err->num = EVB_ERR_NUM_UNKNOWN;
+	err->num = EVB_ERR_NUM_NONE;
 }
 
 int evb_err_set(struct evb_err *const err, enum evb_err_num num,
