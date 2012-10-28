@@ -14,6 +14,6 @@ void evb_err_free(struct evb_err *err);
 
 void evb_err_clr(struct evb_err *err);
 int evb_err_set(struct evb_err *err, enum evb_err_num num,
-		const char *message_format, ...);
+		const char *fmt, ...);
 enum evb_err_num evb_err_get_num(const struct evb_err *err);
-const char *evb_err_get_message(const struct evb_err *err);
+const char *evb_err_get_str(const struct evb_err *err);

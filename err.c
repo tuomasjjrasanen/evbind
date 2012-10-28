@@ -7,7 +7,7 @@
 #include "err.h"
 
 struct evb_err {
-	char *message;
+	char *str;
 	enum evb_err_num num;
 };
 
@@ -19,8 +19,8 @@ struct evb_err *evb_err_new(void)
 	if (!err)
 		return NULL;
 
-	err->message = calloc(1, sizeof(char));
-	if (!err->message) {
+	err->str = calloc(1, sizeof(char));
+	if (!err->str) {
 		free(err);
 		return NULL;
 	}
@@ -32,36 +32,36 @@ struct evb_err *evb_err_new(void)
 
 void evb_err_free(struct evb_err *const err)
 {
-	free(err->message);
+	free(err->str);
 	free(err);
 }
 
 void evb_err_clr(struct evb_err *const err)
 {
-        /* Safe: message is always null terminated */
-	memset(err->message, 0, strlen(err->message));
+        /* Safe: str is always null terminated */
+	memset(err->str, 0, strlen(err->str));
 	err->num = EVB_ERR_NUM_UNKNOWN;
 }
 
 int evb_err_set(struct evb_err *const err, enum evb_err_num num,
-		const char *const message_format, ...)
+		const char *const fmt, ...)
 {
-	char *message;
+	char *str;
 	va_list ap;
 
-	va_start(ap, message_format);
+	va_start(ap, fmt);
 
-	if (vasprintf(&message, message_format, ap) == -1) {
+	if (vasprintf(&str, fmt, ap) == -1) {
 		va_end(ap);
 		return -1;
 	}
 
 	va_end(ap);
 
-	if (err->message)
-		free(err->message);
+	if (err->str)
+		free(err->str);
 
-	err->message = message;
+	err->str = str;
 	err->num = num;
 
 	return 0;
@@ -72,7 +72,7 @@ enum evb_err_num evb_err_get_num(const struct evb_err *const err)
 	return err->num;
 }
 
-const char *evb_err_get_message(const struct evb_err *const err)
+const char *evb_err_get_str(const struct evb_err *const err)
 {
-	return err->message;
+	return err->str;
 }
