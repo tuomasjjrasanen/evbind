@@ -179,6 +179,8 @@ int main(int argc, char **argv)
 	int exitval = EXIT_FAILURE;
 	struct evb_err *err;
 
+	evb_parse_args(argc, argv);
+
         openlog(program_invocation_short_name, LOG_ODELAY | LOG_PERROR,
 		LOG_DAEMON);
 
@@ -187,8 +189,6 @@ int main(int argc, char **argv)
 		syslog(LOG_ERR, "evb_err_new() failed: %s", strerror(errno));
 		return EXIT_FAILURE;
 	}
-
-	evb_parse_args(argc, argv);
 
 	if (!no_daemon && daemonize(err) == -1)
 		goto out;
