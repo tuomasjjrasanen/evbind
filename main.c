@@ -166,7 +166,7 @@ int daemonize(struct evb_err *const err)
 		evb_err_set(err, EVB_ERR_NUM_SYS,
 			    "failed to redirect stderr to /dev/null: %s",
 			    strerror(errno));
-		return EXIT_FAILURE;
+		return -1;
 	}
 
 	umask(0);
