@@ -25,7 +25,7 @@ struct evb_err *evb_err_new(void)
 		return NULL;
 	}
 
-	evb_err_clear(err);
+	evb_err_clr(err);
 
 	return err;
 }
@@ -36,7 +36,7 @@ void evb_err_free(struct evb_err *const err)
 	free(err);
 }
 
-void evb_err_clear(struct evb_err *const err)
+void evb_err_clr(struct evb_err *const err)
 {
         /* Safe: message is always null terminated */
 	memset(err->message, 0, strlen(err->message));
