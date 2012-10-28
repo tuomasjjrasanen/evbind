@@ -195,12 +195,12 @@ int main(int argc, char **argv)
 
 	exitval = EXIT_SUCCESS;
 out:
-	if (err && evb_err_num(err))
-		syslog(LOG_ERR, evb_err_str(err));
+	if (evb_err_num(err))
+		syslog(LOG_ERR, "%s", evb_err_str(err));
 
 	evb_err_free(err);
 
-        syslog(LOG_INFO, "terminated");
+        syslog(LOG_INFO, "%s", "terminated");
 
 	return exitval;
 }
