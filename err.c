@@ -72,7 +72,7 @@ enum evb_err_num evb_err_num(const struct evb_err *const err)
 	return err->num;
 }
 
-const char *evb_err_get_str(const struct evb_err *const err)
+const char *evb_err_str(const struct evb_err *const err)
 {
 	return err->str;
 }
