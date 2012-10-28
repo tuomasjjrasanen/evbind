@@ -8,7 +8,7 @@
 
 struct evb_err {
 	char *message;
-	enum evb_err_code code;
+	enum evb_err_num num;
 };
 
 struct evb_err *evb_err_new(void)
@@ -40,10 +40,10 @@ void evb_err_clr(struct evb_err *const err)
 {
         /* Safe: message is always null terminated */
 	memset(err->message, 0, strlen(err->message));
-	err->code = EVB_ERR_CODE_UNKNOWN;
+	err->num = EVB_ERR_NUM_UNKNOWN;
 }
 
-int evb_err_set(struct evb_err *const err, enum evb_err_code code,
+int evb_err_set(struct evb_err *const err, enum evb_err_num num,
 		const char *const message_format, ...)
 {
 	char *message;
@@ -62,14 +62,14 @@ int evb_err_set(struct evb_err *const err, enum evb_err_code code,
 		free(err->message);
 
 	err->message = message;
-	err->code = code;
+	err->num = num;
 
 	return 0;
 }
 
-enum evb_err_code evb_err_get_code(const struct evb_err *const err)
+enum evb_err_num evb_err_get_num(const struct evb_err *const err)
 {
-	return err->code;
+	return err->num;
 }
 
 const char *evb_err_get_message(const struct evb_err *const err)
