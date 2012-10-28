@@ -29,6 +29,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "err.h"
+
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
 
@@ -103,75 +105,102 @@ static void evb_parse_args(int argc, char **argv)
         }
 }
 
+int daemonize(struct evb_err *const err)
+{
+	int fd_devnull;
+
+	switch (fork()) {
+	case 0:
+		break;
+	case -1:
+		evb_err_set(err, EVB_ERR_NUM_SYS, "failed to fork: %s",
+			    strerror(errno));
+		return -1;
+	default:
+		_exit(0);
+	}
+
+	setsid();
+
+	switch (fork()) {
+	case 0:
+		break;
+	case -1:
+		evb_err_set(err, EVB_ERR_NUM_SYS, "failed to double-fork: %s",
+			    strerror(errno));
+		return -1;
+	default:
+		_exit(0);
+	}
+
+	if (chdir("/") == -1) {
+		evb_err_set(err, EVB_ERR_NUM_SYS,
+			    "failed to chdir to /: %s",
+			    strerror(errno));
+		return -1;
+	}
+
+	fd_devnull = open("/dev/null", O_RDWR);
+	if (fd_devnull == -1) {
+		evb_err_set(err, EVB_ERR_NUM_SYS,
+			    "failed to open /dev/null: %s",
+			    strerror(errno));
+		return -1;
+	}
+
+	if (dup2(fd_devnull, 0) == -1) {
+		evb_err_set(err, EVB_ERR_NUM_SYS,
+			    "failed to redirect stdin to /dev/null: %s",
+			    strerror(errno));
+		return -1;
+	}
+
+	if (dup2(fd_devnull, 1) == -1) {
+		evb_err_set(err, EVB_ERR_NUM_SYS,
+			    "failed to redirect stdout to /dev/null: %s",
+			    strerror(errno));
+		return -1;
+	}
+
+	if (dup2(fd_devnull, 2) == -1) {
+		evb_err_set(err, EVB_ERR_NUM_SYS,
+			    "failed to redirect stderr to /dev/null: %s",
+			    strerror(errno));
+		return EXIT_FAILURE;
+	}
+
+	umask(0);
+
+	return 0;
+}
+
 int main(int argc, char **argv)
 {
-	evb_parse_args(argc, argv);
+	int exitval = EXIT_FAILURE;
+	struct evb_err *err;
 
         openlog(program_invocation_short_name, LOG_ODELAY | LOG_PERROR,
 		LOG_DAEMON);
 
-	if (!no_daemon) {
-		int fd_devnull;
-
-		switch (fork()) {
-		case 0:
-			break;
-		case -1:
-			syslog(LOG_ERR, "failed to fork: %s",
-			       strerror(errno));
-			return EXIT_FAILURE;
-		default:
-			_exit(0);
-		}
-
-		setsid();
-
-		switch (fork()) {
-		case 0:
-			break;
-		case -1:
-			syslog(LOG_ERR, "failed to double-fork: %s",
-			       strerror(errno));
-			return EXIT_FAILURE;
-		default:
-			_exit(0);
-		}
-
-		if (chdir("/") == -1) {
-			syslog(LOG_ERR, "failed to change working directory to /: %s",
-			       strerror(errno));
-			return EXIT_FAILURE;
-		}
-
-		fd_devnull = open("/dev/null", O_RDWR);
-		if (fd_devnull == -1) {
-			syslog(LOG_ERR, "failed to open /dev/null: %s",
-			       strerror(errno));
-			return EXIT_FAILURE;
-		}
-
-		if (dup2(fd_devnull, 0) == -1) {
-			syslog(LOG_ERR, "failed to redirect stdin to /dev/null: %s",
-			       strerror(errno));
-			return EXIT_FAILURE;
-		}
-
-		if (dup2(fd_devnull, 1) == -1) {
-			syslog(LOG_ERR, "failed to redirect stdout to /dev/null: %s",
-			       strerror(errno));
-			return EXIT_FAILURE;
-		}
-
-		if (dup2(fd_devnull, 2) == -1) {
-			syslog(LOG_ERR, "failed to redirect stderr to /dev/null: %s",
-			       strerror(errno));
-			return EXIT_FAILURE;
-		}
-
-		umask(0);
+	err = evb_err_new();
+	if (!err) {
+		syslog(LOG_ERR, "evb_err_new() failed: %s", strerror(errno));
+		return EXIT_FAILURE;
 	}
+
+	evb_parse_args(argc, argv);
+
+	if (!no_daemon && daemonize(err) == -1)
+		goto out;
+
+	exitval = EXIT_SUCCESS;
+out:
+	if (err && evb_err_num(err))
+		syslog(LOG_ERR, evb_err_str(err));
+
+	evb_err_free(err);
 
         syslog(LOG_INFO, "terminated");
 
-	return EXIT_SUCCESS;
+	return exitval;
 }

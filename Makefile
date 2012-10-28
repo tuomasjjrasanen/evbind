@@ -1,5 +1,5 @@
 package = evbind
-objects = main.o
+objects = main.o err.o
 programs = evbind
 
 srcdir = .
@@ -33,7 +33,7 @@ all : $(programs)
 %.o : %.c
 	$(CC) $(CPPFLAGS_ALL) $(CFLAGS_ALL) -c $<
 
-evbind : main.o
+evbind : main.o err.o
 	$(CC) $(LDFLAGS_ALL) $(CFLAGS_ALL) -o $@ $^
 
 installdirs: mkinstalldirs
