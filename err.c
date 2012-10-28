@@ -67,7 +67,7 @@ int evb_err_set(struct evb_err *const err, enum evb_err_num num,
 	return 0;
 }
 
-enum evb_err_num evb_err_get_num(const struct evb_err *const err)
+enum evb_err_num evb_err_num(const struct evb_err *const err)
 {
 	return err->num;
 }
