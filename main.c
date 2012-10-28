@@ -43,7 +43,7 @@ static void evb_main_help_and_exit(void)
         exit(EXIT_FAILURE);
 }
 
-static void evb_parse_args(int argc, char **argv)
+static void evb_main_parse_args(int argc, char **argv)
 {
         const struct option options[] = {
                 {"no-daemon", no_argument, NULL, 'n'},
@@ -179,7 +179,7 @@ int main(int argc, char **argv)
 	int exitval = EXIT_FAILURE;
 	struct evb_err *err;
 
-	evb_parse_args(argc, argv);
+	evb_main_parse_args(argc, argv);
 
         openlog(program_invocation_short_name, LOG_ODELAY | LOG_PERROR,
 		LOG_DAEMON);
