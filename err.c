@@ -8,7 +8,6 @@
 
 struct evb_err {
 	char *message;
-	bool is_set;
 	enum evb_err_code code;
 };
 
@@ -37,21 +36,11 @@ void evb_err_free(struct evb_err *const err)
 	free(err);
 }
 
-bool evb_err_test(const struct evb_err *const err)
+void evb_err_clear(struct evb_err *const err)
 {
-	return err->is_set;
-}
-
-bool evb_err_clear(struct evb_err *const err)
-{
-	bool was_set = err->is_set;
-
         /* Safe: message is always null terminated */
 	memset(err->message, 0, strlen(err->message));
-	err->is_set = false;
 	err->code = EVB_ERR_CODE_UNKNOWN;
-
-	return was_set;
 }
 
 int evb_err_set(struct evb_err *const err, enum evb_err_code code,
@@ -73,7 +62,6 @@ int evb_err_set(struct evb_err *const err, enum evb_err_code code,
 		free(err->message);
 
 	err->message = message;
-	err->is_set = true;
 	err->code = code;
 
 	return 0;
