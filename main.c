@@ -107,7 +107,7 @@ static void evb_main_parse_args(int argc, char **argv)
         }
 }
 
-int daemonize(struct evb_err *const err)
+int evb_main_daemonize(struct evb_err *const err)
 {
 	int fd_devnull;
 
@@ -293,7 +293,7 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	if (!no_daemon && daemonize(err) == -1)
+	if (!no_daemon && evb_main_daemonize(err) == -1)
 		goto out;
 
 	devnodev = evb_main_find_devnodes(&devnodec, err);
