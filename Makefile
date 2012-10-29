@@ -41,7 +41,7 @@ $(manpages) : % : %.rst
 %.o : %.c
 	$(CC) $(CPPFLAGS_ALL) $(CFLAGS_ALL) -c $<
 
-evbind : main.o err.o
+$(programs) : $(objects)
 	$(CC) $(LDFLAGS_ALL) $(CFLAGS_ALL) -o $@ $^
 
 installdirs : mkinstalldirs
