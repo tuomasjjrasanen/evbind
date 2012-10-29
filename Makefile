@@ -26,9 +26,12 @@ INSTALL = install
 INSTALL_PROGRAM = $(INSTALL)
 INSTALL_DATA = $(INSTALL) -m 644
 
-.PHONY : all clean install installdirs uninstall
+.PHONY : all clean install installdirs uninstall manpages
 
-all : $(programs)
+all : $(programs) manpages
+
+manpages :
+	$(MAKE) -C man
 
 %.o : %.c
 	$(CC) $(CPPFLAGS_ALL) $(CFLAGS_ALL) -c $<
@@ -36,7 +39,7 @@ all : $(programs)
 evbind : main.o err.o
 	$(CC) $(LDFLAGS_ALL) $(CFLAGS_ALL) -o $@ $^
 
-installdirs: mkinstalldirs
+installdirs : mkinstalldirs
 	$(srcdir)/mkinstalldirs \
 		$(DESTDIR)$(bindir)
 
@@ -47,5 +50,6 @@ uninstall : $(DESTDIR)$(bindir)/evbind
 	rm -rf $<
 
 clean :
+	$(MAKE) -C man clean
 	rm -rf $(objects)
 	rm -rf $(programs)
