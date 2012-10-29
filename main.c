@@ -29,6 +29,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <libudev.h>
+
 #include "err.h"
 
 extern char *program_invocation_name;
@@ -174,10 +176,111 @@ int daemonize(struct evb_err *const err)
 	return 0;
 }
 
+static char **evb_main_find_devnodes(size_t *const len, struct evb_err *const err)
+{
+	struct udev *udev;
+	struct udev_enumerate *enumerate;
+	struct udev_list_entry *list_entry;
+	struct udev_list_entry *list_entries;
+	char **devnodev = NULL;
+	size_t devnodec = 0;
+
+	evb_err_clr(err);
+
+	udev = udev_new();
+	if (!udev) {
+		evb_err_set(err, EVB_ERR_NUM_UDEV, "%s", "udev_new returned NULL");
+		goto out;
+	}
+
+	enumerate = udev_enumerate_new(udev);
+	if (!enumerate) {
+		evb_err_set(err, EVB_ERR_NUM_UDEV, "%s", "udev_enumerate_new returned NULL");
+		goto out;
+	}
+
+	if (udev_enumerate_add_match_subsystem(enumerate, "input")) {
+		evb_err_set(err, EVB_ERR_NUM_UDEV, "%s", "udev_enumerate_add_match_subsystem failed");
+		goto out;
+	}
+
+	if (udev_enumerate_scan_devices(enumerate)) {
+		evb_err_set(err, EVB_ERR_NUM_UDEV, "%s", "udev_enumerate_scan_devices failed");
+		goto out;
+	}
+
+	list_entries = udev_enumerate_get_list_entry(enumerate);
+
+	udev_list_entry_foreach(list_entry, list_entries) {
+		const char *path;
+		struct udev_device *dev;
+		char **devnodev_new;
+		const char *devnode;
+
+		path = udev_list_entry_get_name(list_entry);
+
+		dev = udev_device_new_from_syspath(udev, path);
+		if (!dev) {
+			evb_err_set(err, EVB_ERR_NUM_UDEV, "%s",
+				    "failed to create udev device");
+			goto out;
+		}
+
+		if (strncmp(udev_device_get_sysname(dev), "event", 5))
+			goto continue_loop;
+
+		devnode = udev_device_get_devnode(dev);
+
+		devnodev_new = realloc(devnodev, sizeof(char *) * (devnodec + 1));
+		if (!devnodev_new) {
+			evb_err_set(err, EVB_ERR_NUM_SYS, "%s",
+				    "failed to allocate memory for devnodes");
+			udev_device_unref(dev);
+			goto out;
+		}
+		devnodev = devnodev_new;
+
+		devnodev[devnodec] = malloc(sizeof(char) *  (strlen(devnode) + 1));
+		if (!devnodev[devnodec]) {
+			evb_err_set(err, EVB_ERR_NUM_SYS, "%s",
+				    "failed to allocate memory for devnode");
+			udev_device_unref(dev);
+			goto out;
+		}
+		strcpy(devnodev[devnodec], devnode);
+		++devnodec;
+
+	continue_loop:
+		udev_device_unref(dev);
+	}
+
+	*len = devnodec;
+out:
+	if (devnodev && evb_err_num(err)) {
+		size_t i;
+		for (i = 0; i < devnodec; ++i) {
+			free(devnodev[i]);
+		}
+		free(devnodev);
+		devnodev = NULL;
+	}
+
+	if (enumerate)
+		udev_enumerate_unref(enumerate);
+
+	if (udev)
+		udev_unref(udev);
+
+	return devnodev;
+}
+
 int main(int argc, char **argv)
 {
 	int exitval = EXIT_FAILURE;
 	struct evb_err *err;
+	char **devnodev;
+	size_t devnodec;
+	size_t i;
 
 	evb_main_parse_args(argc, argv);
 
@@ -192,6 +295,17 @@ int main(int argc, char **argv)
 
 	if (!no_daemon && daemonize(err) == -1)
 		goto out;
+
+	devnodev = evb_main_find_devnodes(&devnodec, err);
+	if (!devnodev)
+		goto out;
+
+	for (i = 0; i < devnodec; ++i) {
+		syslog(LOG_INFO, "found: %s", devnodev[i]);
+		free(devnodev[i]);
+	}
+
+	free(devnodev);
 
 	exitval = EXIT_SUCCESS;
 out:
