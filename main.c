@@ -185,8 +185,6 @@ static char **evb_main_find_devnodes(size_t *const len, struct evb_err *const er
 	char **devnodev = NULL;
 	size_t devnodec = 0;
 
-	evb_err_clr(err);
-
 	udev = udev_new();
 	if (!udev) {
 		evb_err_set(err, EVB_ERR_NUM_UDEV, "%s", "udev_new returned NULL");
