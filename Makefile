@@ -1,6 +1,7 @@
 package = evbind
 objects = main.o err.o
 programs = evbind
+manpages = man/evbind.8
 
 srcdir = .
 prefix = /usr/local
@@ -30,12 +31,12 @@ INSTALL = install
 INSTALL_PROGRAM = $(INSTALL)
 INSTALL_DATA = $(INSTALL) -m 644
 
-.PHONY : all clean install installdirs uninstall manpages
+.PHONY : all clean install installdirs uninstall
 
-all : $(programs) manpages
+all : $(programs) $(manpages)
 
-manpages :
-	$(MAKE) -C man
+$(manpages) : % : %.rst
+	rst2man $< $@
 
 %.o : %.c
 	$(CC) $(CPPFLAGS_ALL) $(CFLAGS_ALL) -c $<
@@ -54,6 +55,6 @@ uninstall : $(DESTDIR)$(sbindir)/evbind
 	rm -rf $<
 
 clean :
-	$(MAKE) -C man clean
 	rm -rf $(objects)
 	rm -rf $(programs)
+	rm -rf $(manpages)
