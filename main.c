@@ -67,31 +67,35 @@ static void evb_main_parse_args(int argc, char **argv)
                         no_daemon = true;
                         break;
                 case 'V':
-                        printf("evbind 0.1\n"
-                               "Copyright (C) 2012 Tuomas Jorma Juhani Räsänen\n"
-                               "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n"
-                               "This is free software: you are free to change and redistribute it.\n"
-                               "There is NO WARRANTY, to the extent permitted by law.\n"
-			       "\n"
-			       "Written by Tuomas Jorma Juhani Räsänen.\n");
+                        printf("\
+evbind 0.1\n\
+Copyright (C) 2012 Tuomas Jorma Juhani Räsänen\n\
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n\
+This is free software: you are free to change and redistribute it.\n\
+There is NO WARRANTY, to the extent permitted by law.\n\
+\n\
+Written by Tuomas Jorma Juhani Räsänen.\n\
+");
                         exit(EXIT_SUCCESS);
                 case 'h':
-                        printf("Usage: %s [OPTION]...\n"
-                               "Evbind monitors input event devices and executes arbitrary\n"
-			       "programs bound to individual events or event combinations.\n"
-			       "\n"
-			       "Bindings are defined in /etc/evbind/events directory.\n"
-                               "\n"
-                               "Options:\n"
-                               "     --no-daemon            do not run as a daemon process\n"
-                               " -h, --help                 display this help and exit\n"
-                               " -V, --version              output version information and exit\n"
-                               "\n"
-                               "Processing information and error messages are always printed into syslog.\n"
-                               "If evbind is not running as a daemon, logs are also printed into stderr.\n"
-                               "\n"
-                               "Homepage: http://tjjr.fi/sw/evbind/\n"
-			       "\n", program_invocation_name);
+                        printf("\
+Usage: %s [OPTION]...\n\
+Evbind monitors input event devices and executes arbitrary\n\
+programs bound to individual events or event combinations.\n\
+\n\
+Bindings are defined in /etc/evbind/events directory.\n\
+\n\
+Options:\n\
+     --no-daemon            do not run as a daemon\n\
+ -h, --help                 display this help and exit\n\
+ -V, --version              output version information and exit\n\
+\n\
+Information and error messages are always printed to syslog. If\n\
+evbind is not running as a daemon, messages are printed also to\n\
+stderr.\n\
+\n\
+Homepage: http://tjjr.fi/sw/evbind/\n\
+", program_invocation_name);
                         exit(EXIT_SUCCESS);
                 case '?':
                         evb_main_help_and_exit();
