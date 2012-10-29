@@ -1,5 +1,3 @@
-#include <stdbool.h>
-
 enum evb_err_num {
 	EVB_ERR_NUM_NONE,
 	EVB_ERR_NUM_SYS,
