@@ -6,12 +6,16 @@ srcdir = .
 prefix = /usr/local
 exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
+sbindir = $(exec_prefix)/sbin
 datarootdir = $(prefix)/share
 datadir = $(datarootdir)
 sysconfdir = $(prefix)/etc
 includedir = $(prefix)/include
 docdir = $(datarootdir)/doc/$(package)
 infodir = $(datarootdir)/info
+mandir = $(datarootdir)/man
+man8dir = $(mandir)/man8
+man8ext = .8
 
 CFLAGS = -g -Wall -Wextra -Werror
 CFLAGS_ALL = $(CFLAGS) -std=c99
@@ -41,12 +45,12 @@ evbind : main.o err.o
 
 installdirs : mkinstalldirs
 	$(srcdir)/mkinstalldirs \
-		$(DESTDIR)$(bindir)
+		$(DESTDIR)$(sbindir)
 
 install : $(programs) installdirs
-	$(INSTALL_PROGRAM) $< $(DESTDIR)$(bindir)/$<
+	$(INSTALL_PROGRAM) $< $(DESTDIR)$(sbindir)/$<
 
-uninstall : $(DESTDIR)$(bindir)/evbind
+uninstall : $(DESTDIR)$(sbindir)/evbind
 	rm -rf $<
 
 clean :
