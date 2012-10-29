@@ -255,8 +255,7 @@ static char **evb_main_find_devnodes(size_t *const len, struct evb_err *const er
 	*len = devnodec;
 out:
 	if (devnodev && evb_err_num(err)) {
-		size_t i;
-		for (i = 0; i < devnodec; ++i) {
+		for (size_t i = 0; i < devnodec; ++i) {
 			free(devnodev[i]);
 		}
 		free(devnodev);
@@ -278,7 +277,6 @@ int main(int argc, char **argv)
 	struct evb_err *err;
 	char **devnodev;
 	size_t devnodec;
-	size_t i;
 
 	evb_main_parse_args(argc, argv);
 
@@ -298,7 +296,7 @@ int main(int argc, char **argv)
 	if (!devnodev)
 		goto out;
 
-	for (i = 0; i < devnodec; ++i) {
+	for (size_t i = 0; i < devnodec; ++i) {
 		syslog(LOG_INFO, "found: %s", devnodev[i]);
 		free(devnodev[i]);
 	}

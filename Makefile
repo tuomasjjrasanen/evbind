@@ -14,7 +14,7 @@ docdir = $(datarootdir)/doc/$(package)
 infodir = $(datarootdir)/info
 
 CFLAGS = -g -Wall -Wextra -Werror
-CFLAGS_ALL = $(CFLAGS)
+CFLAGS_ALL = $(CFLAGS) -std=c99
 
 LDFLAGS =
 LDFLAGS_ALL = $(LDFLAGS) -ludev
