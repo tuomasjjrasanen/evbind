@@ -3,7 +3,6 @@ objects = main.o err.o
 programs = evbind
 manpages = man/evbind.8
 
-srcdir = .
 prefix = /usr/local
 exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
@@ -44,9 +43,8 @@ $(manpages) : % : %.rst
 $(programs) : $(objects)
 	$(CC) $(LDFLAGS_ALL) $(CFLAGS_ALL) -o $@ $^
 
-installdirs : mkinstalldirs
-	$(srcdir)/mkinstalldirs \
-		$(DESTDIR)$(sbindir)
+installdirs : tools/mkinstalldirs
+	tools/mkinstalldirs $(DESTDIR)$(sbindir)
 
 install : $(programs) installdirs
 	$(INSTALL_PROGRAM) $(programs) $(DESTDIR)$(sbindir)/
