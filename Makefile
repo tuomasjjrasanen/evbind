@@ -51,9 +51,6 @@ installdirs : mkinstalldirs
 install : $(programs) installdirs
 	$(INSTALL_PROGRAM) $(programs) $(DESTDIR)$(sbindir)/
 
-uninstall : $(DESTDIR)$(sbindir)/evbind
-	rm -rf $<
-
 clean :
 	rm -rf $(objects)
 	rm -rf $(programs)
