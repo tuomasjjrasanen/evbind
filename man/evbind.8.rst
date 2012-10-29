@@ -19,8 +19,8 @@ DESCRIPTION
 
 evbind monitors input event devices and executes arbitrary programs
 bound to individual events or event combinations. By default, evbind
-detaches itself from the controlling terminal runs in the background as
-a daemon process. This can disabled with **--no-daemon** flag.
+detaches itself from the controlling terminal and runs in the background
+as a daemon process. This can disabled with **--no-daemon** flag.
 
 OPTIONS
 =======
