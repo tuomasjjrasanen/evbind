@@ -80,21 +80,13 @@ Written by Tuomas Jorma Juhani Räsänen.\n\
                 case 'h':
                         printf("\
 Usage: %s [OPTION]...\n\
-Evbind monitors input event devices and executes arbitrary\n\
+evbind monitors input event devices and executes arbitrary\n\
 programs bound to individual events or event combinations.\n\
-\n\
-Bindings are defined in /etc/evbind/events directory.\n\
 \n\
 Options:\n\
      --no-daemon            do not run as a daemon\n\
  -h, --help                 display this help and exit\n\
  -V, --version              output version information and exit\n\
-\n\
-Information and error messages are always printed to syslog. If\n\
-evbind is not running as a daemon, messages are printed also to\n\
-stderr.\n\
-\n\
-Homepage: http://tjjr.fi/sw/evbind/\n\
 ", program_invocation_name);
                         exit(EXIT_SUCCESS);
                 case '?':
