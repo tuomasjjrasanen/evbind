@@ -49,7 +49,7 @@ installdirs : mkinstalldirs
 		$(DESTDIR)$(sbindir)
 
 install : $(programs) installdirs
-	$(INSTALL_PROGRAM) $< $(DESTDIR)$(sbindir)/$<
+	$(INSTALL_PROGRAM) $(programs) $(DESTDIR)$(sbindir)/
 
 uninstall : $(DESTDIR)$(sbindir)/evbind
 	rm -rf $<
