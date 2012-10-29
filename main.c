@@ -128,7 +128,8 @@ int evb_main_daemonize(struct evb_err *const err)
 	case 0:
 		break;
 	case -1:
-		evb_err_set(err, EVB_ERR_NUM_SYS, "failed to double-fork: %s",
+		evb_err_set(err, EVB_ERR_NUM_SYS,
+			    "failed to double-fork: %s",
 			    strerror(errno));
 		return -1;
 	default:
@@ -176,7 +177,8 @@ int evb_main_daemonize(struct evb_err *const err)
 	return 0;
 }
 
-static char **evb_main_find_devnodes(size_t *const len, struct evb_err *const err)
+static char **evb_main_find_devnodes(size_t *const len,
+				     struct evb_err *const err)
 {
 	struct udev *udev;
 	struct udev_enumerate *enumerate;
@@ -187,23 +189,27 @@ static char **evb_main_find_devnodes(size_t *const len, struct evb_err *const er
 
 	udev = udev_new();
 	if (!udev) {
-		evb_err_set(err, EVB_ERR_NUM_UDEV, "%s", "udev_new returned NULL");
+		evb_err_set(err, EVB_ERR_NUM_UDEV, "%s",
+			    "udev_new returned NULL");
 		goto out;
 	}
 
 	enumerate = udev_enumerate_new(udev);
 	if (!enumerate) {
-		evb_err_set(err, EVB_ERR_NUM_UDEV, "%s", "udev_enumerate_new returned NULL");
+		evb_err_set(err, EVB_ERR_NUM_UDEV, "%s",
+			    "udev_enumerate_new returned NULL");
 		goto out;
 	}
 
 	if (udev_enumerate_add_match_subsystem(enumerate, "input")) {
-		evb_err_set(err, EVB_ERR_NUM_UDEV, "%s", "udev_enumerate_add_match_subsystem failed");
+		evb_err_set(err, EVB_ERR_NUM_UDEV, "%s",
+			    "udev_enumerate_add_match_subsystem failed");
 		goto out;
 	}
 
 	if (udev_enumerate_scan_devices(enumerate)) {
-		evb_err_set(err, EVB_ERR_NUM_UDEV, "%s", "udev_enumerate_scan_devices failed");
+		evb_err_set(err, EVB_ERR_NUM_UDEV, "%s",
+			    "udev_enumerate_scan_devices failed");
 		goto out;
 	}
 
@@ -227,9 +233,8 @@ static char **evb_main_find_devnodes(size_t *const len, struct evb_err *const er
 		if (strncmp(udev_device_get_sysname(dev), "event", 5))
 			goto continue_loop;
 
-		devnode = udev_device_get_devnode(dev);
-
-		devnodev_new = realloc(devnodev, sizeof(char *) * (devnodec + 1));
+		devnodev_new = realloc(devnodev,
+				       sizeof(char *) * (devnodec + 1));
 		if (!devnodev_new) {
 			evb_err_set(err, EVB_ERR_NUM_SYS, "%s",
 				    "failed to allocate memory for devnodes");
@@ -238,7 +243,9 @@ static char **evb_main_find_devnodes(size_t *const len, struct evb_err *const er
 		}
 		devnodev = devnodev_new;
 
-		devnodev[devnodec] = malloc(sizeof(char) *  (strlen(devnode) + 1));
+		devnode = udev_device_get_devnode(dev);
+		devnodev[devnodec] = malloc(sizeof(char) *
+					    (strlen(devnode) + 1));
 		if (!devnodev[devnodec]) {
 			evb_err_set(err, EVB_ERR_NUM_SYS, "%s",
 				    "failed to allocate memory for devnode");
@@ -285,7 +292,8 @@ int main(int argc, char **argv)
 
 	err = evb_err_new();
 	if (!err) {
-		syslog(LOG_ERR, "evb_err_new() failed: %s", strerror(errno));
+		syslog(LOG_ERR, "evb_err_new() failed: %s",
+		       strerror(errno));
 		return EXIT_FAILURE;
 	}
 
