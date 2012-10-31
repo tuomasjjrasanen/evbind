@@ -1,9 +1,6 @@
 prefix = /usr/local
 exec_prefix = $(prefix)
 sbindir = $(exec_prefix)/sbin
-datarootdir = $(prefix)/share
-mandir = $(datarootdir)/man
-man8dir = $(mandir)/man8
 
 INSTALL = install
 INSTALL_PROGRAM = $(INSTALL)
