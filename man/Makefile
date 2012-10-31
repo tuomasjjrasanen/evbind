@@ -1,11 +1,11 @@
 manpages = evbind.8
 
-.PHONY = all clean
-
+.PHONY : all
 all : $(manpages)
 
 $(manpages) : % : %.rst
 	rst2man $< $@
 
+.PHONY : clean
 clean :
 	rm -rf $(manpages)
