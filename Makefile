@@ -1,6 +1,5 @@
 objects = main.o err.o
 programs = evbind
-manpages = man/evbind.8
 
 prefix = /usr/local
 exec_prefix = $(prefix)
@@ -22,12 +21,15 @@ INSTALL = install
 INSTALL_PROGRAM = $(INSTALL)
 INSTALL_DATA = $(INSTALL) -m 644
 
-.PHONY : all clean install installdirs uninstall
+subdirs = man
+clean-subdirs = $(subdirs:%=clean-%)
 
-all : $(programs) $(manpages)
+.PHONY : all clean install installdirs uninstall $(subdirs) $(clean-subdirs)
 
-$(manpages) : % : %.rst
-	rst2man $< $@
+all : $(programs) $(subdirs)
+
+$(subdirs) :
+	$(MAKE) -C $@
 
 %.o : %.c
 	$(CC) $(CPPFLAGS_ALL) $(CFLAGS_ALL) -c $<
@@ -41,7 +43,9 @@ installdirs : tools/mkinstalldirs
 install : $(programs) installdirs
 	$(INSTALL_PROGRAM) $(programs) $(DESTDIR)$(sbindir)/
 
-clean :
+$(clean-subdirs) :
+	$(MAKE) -C $(@:clean-%=%) clean
+
+clean : $(clean-subdirs)
 	rm -rf $(objects)
 	rm -rf $(programs)
-	rm -rf $(manpages)
