@@ -173,8 +173,8 @@ int evb_main_daemonize(struct evb_err *const err)
 	return 0;
 }
 
-static char **evb_main_find_devnodes(size_t *const len,
-				     struct evb_err *const err)
+static char **evb_main_get_evdevs(size_t *const len,
+				  struct evb_err *const err)
 {
 	struct udev *udev;
 	struct udev_enumerate *enumerate;
@@ -278,8 +278,8 @@ int main(int argc, char **argv)
 {
 	int exitval = EXIT_FAILURE;
 	struct evb_err *err;
-	char **devnodev;
-	size_t devnodec;
+	char **evdevs;
+	size_t evdev_count;
 
 	evb_main_parse_args(argc, argv);
 
@@ -296,16 +296,16 @@ int main(int argc, char **argv)
 	if (!no_daemon && evb_main_daemonize(err) == -1)
 		goto out;
 
-	devnodev = evb_main_find_devnodes(&devnodec, err);
-	if (!devnodev)
+	evdevs = evb_main_get_evdevs(&evdev_count, err);
+	if (!evdevs)
 		goto out;
 
-	for (size_t i = 0; i < devnodec; ++i) {
-		syslog(LOG_INFO, "found: %s", devnodev[i]);
-		free(devnodev[i]);
+	for (size_t i = 0; i < evdev_count; ++i) {
+		syslog(LOG_INFO, "found: %s", evdevs[i]);
+		free(evdevs[i]);
 	}
 
-	free(devnodev);
+	free(evdevs);
 
 	exitval = EXIT_SUCCESS;
 out:
