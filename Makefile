@@ -17,8 +17,8 @@ $(subdirs) :
 	$(MAKE) -C $@
 
 .PHONY : installdirs
-installdirs : tools/mkinstalldirs
-	tools/mkinstalldirs $(DESTDIR)$(sbindir)
+installdirs : build-aux/mkinstalldirs
+	build-aux/mkinstalldirs $(DESTDIR)$(sbindir)
 
 .PHONY : install
 install : $(subdirs) installdirs
