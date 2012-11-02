@@ -40,9 +40,18 @@ static bool main_no_daemon = false;
 
 static struct evb_err *main_err = NULL;
 static struct udev *main_udev = NULL;
+static struct udev_monitor *main_udev_mon = NULL;
+static int main_udev_mon_fd = -1;
 
 static void main_free()
 {
+	main_udev_mon_fd = -1;
+
+	if (main_udev_mon) {
+		udev_monitor_unref(main_udev_mon);
+		main_udev_mon = NULL;
+	}
+
 	if (main_udev) {
 		udev_unref(main_udev);
 		main_udev = NULL;
@@ -69,6 +78,30 @@ static int main_init()
 	main_udev = udev_new();
 	if (!main_udev) {
 		syslog(LOG_ERR, "udev_new() failed");
+		goto err;
+	}
+
+	main_udev_mon = udev_monitor_new_from_netlink(main_udev, "udev");
+	if (!main_udev_mon) {
+		syslog(LOG_ERR, "%s", "udev_monitor_new_from_netlink() failed");
+		goto err;
+	}
+
+	if (udev_monitor_filter_add_match_subsystem_devtype(main_udev_mon,
+							    "input", NULL)) {
+		syslog(LOG_ERR, "%s", "failed to set udev monitor filter");
+		goto err;
+	}
+
+	if (udev_monitor_enable_receiving(main_udev_mon)) {
+		syslog(LOG_ERR, "%s", "failed to start udev monitor");
+		goto err;
+	}
+
+	main_udev_mon_fd = udev_monitor_get_fd(main_udev_mon);
+	if (main_udev_mon_fd < 0) {
+		syslog(LOG_ERR, "%s",
+		       "got illegal udev monitor file descriptor");
 		goto err;
 	}
 
