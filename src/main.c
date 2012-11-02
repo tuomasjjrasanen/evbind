@@ -36,16 +36,16 @@
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
 
-static bool no_daemon = false;
+static bool main_no_daemon = false;
 
-static void evb_main_help_and_exit(void)
+static void main_help_and_exit(void)
 {
         fprintf(stderr, "Try `%s --help' for more information.\n",
                 program_invocation_name);
         exit(EXIT_FAILURE);
 }
 
-static void evb_main_parse_args(int argc, char **argv)
+static void main_parse_args(int argc, char **argv)
 {
         const struct option options[] = {
                 {"no-daemon", no_argument, NULL, 'n'},
@@ -64,7 +64,7 @@ static void evb_main_parse_args(int argc, char **argv)
 
                 switch (option) {
                 case 'n':
-                        no_daemon = true;
+                        main_no_daemon = true;
                         break;
                 case 'V':
                         printf("\
@@ -90,7 +90,7 @@ Options:\n\
 ", program_invocation_name);
                         exit(EXIT_SUCCESS);
                 case '?':
-                        evb_main_help_and_exit();
+                        main_help_and_exit();
                 default:
                         errx(EXIT_FAILURE, "argument parsing failed");
                 }
@@ -99,11 +99,11 @@ Options:\n\
         if (optind != argc) {
                 fprintf(stderr, "%s: wrong number of arguments\n",
                         program_invocation_name);
-                evb_main_help_and_exit();
+                main_help_and_exit();
         }
 }
 
-int evb_main_daemonize(struct evb_err *const err)
+int main_daemonize(struct evb_err *const err)
 {
 	int fd_devnull;
 
@@ -173,8 +173,8 @@ int evb_main_daemonize(struct evb_err *const err)
 	return 0;
 }
 
-static char **evb_main_get_evdevs(size_t *const len,
-				  struct evb_err *const err)
+static char **main_get_evdevs(size_t *const len,
+			      struct evb_err *const err)
 {
 	struct udev *udev;
 	struct udev_enumerate *enumerate;
@@ -274,13 +274,13 @@ out:
 	return devnodev;
 }
 
-static int evb_main_loop(struct evb_err *const err)
+static int main_loop(struct evb_err *const err)
 {
 	int retval = -1;
 	char **evdevs;
 	size_t evdev_count;
 
-	evdevs = evb_main_get_evdevs(&evdev_count, err);
+	evdevs = main_get_evdevs(&evdev_count, err);
 	if (!evdevs)
 		goto out;
 
@@ -301,7 +301,7 @@ int main(int argc, char **argv)
 	int exitval = EXIT_FAILURE;
 	struct evb_err *err;
 
-	evb_main_parse_args(argc, argv);
+	main_parse_args(argc, argv);
 
         openlog(program_invocation_short_name, LOG_ODELAY | LOG_PERROR,
 		LOG_DAEMON);
@@ -313,10 +313,10 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	if (!no_daemon && evb_main_daemonize(err) == -1)
+	if (!main_no_daemon && main_daemonize(err) == -1)
 		goto out;
 
-	if (evb_main_loop(err))
+	if (main_loop(err))
 		goto out;
 
 	exitval = EXIT_SUCCESS;
