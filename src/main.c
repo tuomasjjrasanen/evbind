@@ -266,13 +266,31 @@ int main_daemonize()
 	return 0;
 }
 
-static char **main_get_evdevs(size_t *const len)
+static int main_add_evdev(struct udev_device *const dev)
 {
+	const char *devnode;
+	int fd;
+
+	devnode = udev_device_get_devnode(dev);
+	fd = open(devnode, O_RDONLY);
+	if (fd < 0) {
+		evb_err_set(main_err, EVB_ERR_NUM_SYS,
+			    "failed to open %s: %s",
+			    devnode, strerror(errno));
+		return -1;
+	}
+
+	FD_SET(fd, &main_evdev_fds);
+	main_evdev_max_fd = max(fd, main_evdev_max_fd);
+
+	return 0;
+}
+
+static int main_open_evdevs()
+{
+	int retval = -1;
 	struct udev_enumerate *enumerate;
 	struct udev_list_entry *list_entry;
-	struct udev_list_entry *list_entries;
-	char **devnodev = NULL;
-	size_t devnodec = 0;
 
 	enumerate = udev_enumerate_new(main_udev);
 	if (!enumerate) {
@@ -293,17 +311,14 @@ static char **main_get_evdevs(size_t *const len)
 		goto out;
 	}
 
-	list_entries = udev_enumerate_get_list_entry(enumerate);
-
-	udev_list_entry_foreach(list_entry, list_entries) {
-		const char *path;
+	udev_list_entry_foreach(list_entry,
+				udev_enumerate_get_list_entry(enumerate)) {
+		const char *syspath;
 		struct udev_device *dev;
-		char **devnodev_new;
-		const char *devnode;
 
-		path = udev_list_entry_get_name(list_entry);
+		syspath = udev_list_entry_get_name(list_entry);
 
-		dev = udev_device_new_from_syspath(main_udev, path);
+		dev = udev_device_new_from_syspath(main_udev, syspath);
 		if (!dev) {
 			evb_err_set(main_err, EVB_ERR_NUM_UDEV, "%s",
 				    "failed to create udev device");
@@ -313,69 +328,31 @@ static char **main_get_evdevs(size_t *const len)
 		if (strncmp(udev_device_get_sysname(dev), "event", 5))
 			goto continue_loop;
 
-		devnodev_new = realloc(devnodev,
-				       sizeof(char *) * (devnodec + 1));
-		if (!devnodev_new) {
-			evb_err_set(main_err, EVB_ERR_NUM_SYS, "%s",
-				    "failed to allocate memory for devnodes");
-			udev_device_unref(dev);
-			goto out;
-		}
-		devnodev = devnodev_new;
-
-		devnode = udev_device_get_devnode(dev);
-		devnodev[devnodec] = malloc(sizeof(char) *
-					    (strlen(devnode) + 1));
-		if (!devnodev[devnodec]) {
-			evb_err_set(main_err, EVB_ERR_NUM_SYS, "%s",
-				    "failed to allocate memory for devnode");
-			udev_device_unref(dev);
-			goto out;
-		}
-		strcpy(devnodev[devnodec], devnode);
-		++devnodec;
+		/* If opening the device failed for some reason, we log
+		 * it, but keep running. The device might be broken, it
+		 * might have been just removed etc. It's not
+		 * catastrophic. */
+		if (main_add_evdev(dev))
+			syslog(LOG_WARNING, "%s", evb_err_str(main_err));
 
 	continue_loop:
 		udev_device_unref(dev);
 	}
 
-	*len = devnodec;
+	retval = 0;
 out:
-	if (devnodev && evb_err_num(main_err)) {
-		for (size_t i = 0; i < devnodec; ++i) {
-			free(devnodev[i]);
-		}
-		free(devnodev);
-		devnodev = NULL;
-	}
-
 	if (enumerate)
 		udev_enumerate_unref(enumerate);
 
-	return devnodev;
+	return retval;
 }
 
 static int main_loop()
 {
 	int retval = -1;
-	char **evdevs;
-	size_t evdev_count;
 
-	evdevs = main_get_evdevs(&evdev_count);
-	if (!evdevs)
+	if (main_open_evdevs())
 		goto out;
-
-	for (size_t i = 0; i < evdev_count; ++i) {
-		int fd = open(evdevs[i], O_RDONLY);
-		if (fd == -1) {
-			syslog(LOG_WARNING, "failed to open %s: %s",
-			       evdevs[i], strerror(errno));
-		} else {
-			FD_SET(fd, &main_evdev_fds);
-			main_evdev_max_fd = max(fd, main_evdev_max_fd);
-		}
-		free(evdevs[i]);
-	}
 
 	while (!main_is_stopped) {
 		pause();
@@ -383,7 +360,6 @@ static int main_loop()
 
 	retval = 0;
 out:
-	free(evdevs);
 
 	return retval;
 }
