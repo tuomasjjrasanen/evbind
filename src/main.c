@@ -65,8 +65,7 @@ static int main_init()
 
 	main_udev = udev_new();
 	if (!main_udev) {
-		evb_err_set(main_err, EVB_ERR_NUM_UDEV, "%s",
-			    "udev_new returned NULL");
+		syslog(LOG_ERR, "udev_new() failed");
 		goto err;
 	}
 
@@ -331,10 +330,10 @@ int main(int argc, char **argv)
         openlog(program_invocation_short_name, LOG_ODELAY | LOG_PERROR,
 		LOG_DAEMON);
 
-	if (!main_no_daemon && main_daemonize() == -1)
+	if (main_init())
 		goto out;
 
-	if (main_init())
+	if (!main_no_daemon && main_daemonize() == -1)
 		goto out;
 
 	if (main_loop())
