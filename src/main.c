@@ -38,7 +38,30 @@ extern char *program_invocation_short_name;
 
 static bool main_no_daemon = false;
 
-static void main_help_and_exit(void)
+static struct udev *main_udev;
+
+static int main_init(struct evb_err *const err)
+{
+	int retval = -1;
+
+	main_udev = udev_new();
+	if (!main_udev) {
+		evb_err_set(err, EVB_ERR_NUM_UDEV, "%s",
+			    "udev_new returned NULL");
+		goto out;
+	}
+
+	retval = 0;
+out:
+	return retval;
+}
+
+static void main_free()
+{
+	udev_unref(main_udev);
+}
+
+static void main_help_and_exit()
 {
         fprintf(stderr, "Try `%s --help' for more information.\n",
                 program_invocation_name);
@@ -176,21 +199,13 @@ int main_daemonize(struct evb_err *const err)
 static char **main_get_evdevs(size_t *const len,
 			      struct evb_err *const err)
 {
-	struct udev *udev;
 	struct udev_enumerate *enumerate;
 	struct udev_list_entry *list_entry;
 	struct udev_list_entry *list_entries;
 	char **devnodev = NULL;
 	size_t devnodec = 0;
 
-	udev = udev_new();
-	if (!udev) {
-		evb_err_set(err, EVB_ERR_NUM_UDEV, "%s",
-			    "udev_new returned NULL");
-		goto out;
-	}
-
-	enumerate = udev_enumerate_new(udev);
+	enumerate = udev_enumerate_new(main_udev);
 	if (!enumerate) {
 		evb_err_set(err, EVB_ERR_NUM_UDEV, "%s",
 			    "udev_enumerate_new returned NULL");
@@ -219,7 +234,7 @@ static char **main_get_evdevs(size_t *const len,
 
 		path = udev_list_entry_get_name(list_entry);
 
-		dev = udev_device_new_from_syspath(udev, path);
+		dev = udev_device_new_from_syspath(main_udev, path);
 		if (!dev) {
 			evb_err_set(err, EVB_ERR_NUM_UDEV, "%s",
 				    "failed to create udev device");
@@ -268,9 +283,6 @@ out:
 	if (enumerate)
 		udev_enumerate_unref(enumerate);
 
-	if (udev)
-		udev_unref(udev);
-
 	return devnodev;
 }
 
@@ -316,6 +328,9 @@ int main(int argc, char **argv)
 	if (!main_no_daemon && main_daemonize(err) == -1)
 		goto out;
 
+	if (main_init(err))
+		goto out;
+
 	if (main_loop(err))
 		goto out;
 
@@ -323,6 +338,8 @@ int main(int argc, char **argv)
 out:
 	if (evb_err_num(err))
 		syslog(LOG_ERR, "%s", evb_err_str(err));
+
+	main_free();
 
 	evb_err_free(err);
 
