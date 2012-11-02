@@ -56,6 +56,9 @@ static void main_free()
 
 static int main_init()
 {
+        openlog(program_invocation_short_name, LOG_ODELAY | LOG_PERROR,
+		LOG_DAEMON);
+
 	main_err = evb_err_new();
 	if (!main_err) {
 		syslog(LOG_ERR, "evb_err_new() failed: %s",
@@ -327,13 +330,10 @@ int main(int argc, char **argv)
 
 	main_parse_args(argc, argv);
 
-        openlog(program_invocation_short_name, LOG_ODELAY | LOG_PERROR,
-		LOG_DAEMON);
-
 	if (main_init())
-		goto out;
+		return EXIT_FAILURE;
 
-	if (!main_no_daemon && main_daemonize() == -1)
+	if (!main_no_daemon && main_daemonize())
 		goto out;
 
 	if (main_loop())
@@ -345,8 +345,6 @@ out:
 		syslog(LOG_ERR, "%s", evb_err_str(main_err));
 
 	main_free();
-
-        syslog(LOG_INFO, "%s", "terminated");
 
 	return exitval;
 }
