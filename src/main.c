@@ -16,7 +16,6 @@
 */
 
 #include <getopt.h>
-#include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
@@ -165,7 +164,9 @@ Options:\n\
                 case '?':
                         main_help_and_exit();
                 default:
-                        errx(EXIT_FAILURE, "argument parsing failed");
+			fprintf(stderr, "%s: argument parsing failed",
+				program_invocation_name);
+			exit(EXIT_FAILURE);
                 }
         }
 
