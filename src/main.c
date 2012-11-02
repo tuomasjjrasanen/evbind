@@ -29,6 +29,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <linux/input.h>
+
 #include <libudev.h>
 
 #include "err.h"
@@ -347,6 +349,78 @@ out:
 	return retval;
 }
 
+static int main_handle_udev_mon()
+{
+	int retval = -1;
+	struct udev_device *dev;
+
+	dev = udev_monitor_receive_device(main_udev_mon);
+	if (!dev) {
+		/* Udev informed us that there is a
+		 * device event, but now it returns
+		 * NULL. Strange. This probably should
+		 * not be possible, but it's documented
+		 * in libudev so we'll try to handle
+		 * it. */
+		evb_err_set(main_err, EVB_ERR_NUM_UDEV,
+			    "%s", "udev monitor received NULL device");
+		goto out;
+	}
+
+	if (!strncmp(udev_device_get_sysname(dev), "event", 5) &&
+	    !strncmp(udev_device_get_action(dev), "add", 3)) {
+		if (main_add_evdev(dev))
+			goto out;
+	}
+
+	retval = 0;
+out:
+	if (dev)
+		udev_device_unref(dev);
+	return retval;
+}
+
+static int main_handle_evdev(const int fd)
+{
+	struct input_event ev;
+	ssize_t nread;
+
+	/* Ensure one non-interrupted read. */
+	do {
+		errno = 0;
+		nread = read(fd, &ev, sizeof(ev));
+	} while (errno == EINTR);
+
+	switch (errno) {
+	case 0:
+		break;
+	case ENODEV:
+		/* The device was removed. That's fine, we just need to
+		 * remove it from our fd set to not read it again. */
+		FD_CLR(fd, &main_evdev_fds);
+		if (main_evdev_max_fd == fd)
+			--main_evdev_max_fd;
+		close(fd); /* Called to release the fd. */
+		return 0;
+	default:
+		evb_err_set(main_err, EVB_ERR_NUM_SYS,
+			    "evdev read failed: %d %s",
+			    errno, strerror(errno));
+		return -1;
+	}
+
+	if (nread != sizeof(ev)) {
+		evb_err_set(main_err, EVB_ERR_NUM_UNKNOWN,
+			    "evdev read expected %ld bytes but got only %ld",
+			    sizeof(ev), nread);
+		return -1;
+	}
+
+	syslog(LOG_INFO, "%d %d %d", ev.type, ev.code, ev.value);
+
+	return 0;
+}
+
 static int main_loop()
 {
 	int retval = -1;
@@ -355,11 +429,52 @@ static int main_loop()
 		goto out;
 
 	while (!main_is_stopped) {
-		pause();
+		fd_set readfds;
+		int max_fd;
+		int nfds;
+
+		FD_ZERO(&readfds);
+		FD_SET(main_udev_mon_fd, &readfds);
+
+		max_fd = main_udev_mon_fd;
+
+		for (int fd = 0; fd <= main_evdev_max_fd; ++fd) {
+			if (FD_ISSET(fd, &main_evdev_fds)) {
+				FD_SET(fd, &readfds);
+				max_fd = max(fd, max_fd);
+			}
+		}
+
+		nfds = pselect(max_fd + 1, &readfds, NULL, NULL, NULL, NULL);
+		if (nfds < 0) {
+			if (errno == EINTR) {
+				/* Someone interrupted us, that's
+				 * fine. Let's just continue to see if
+				 * they wanted us to stop runnning. See
+				 * main_sighandler(). */
+				continue;
+			}
+			evb_err_set(main_err, EVB_ERR_NUM_SYS,
+				    "pselect() failed: %s", strerror(errno));
+			goto out;
+		}
+
+		for (int fd = 0; fd <= max_fd && nfds > 0; ++fd) {
+			if (FD_ISSET(fd, &readfds)) {
+				if (fd == main_udev_mon_fd)
+					main_handle_udev_mon();
+				else
+					main_handle_evdev(fd);
+				--nfds;
+			}
+		}
 	}
 
 	retval = 0;
 out:
+	/* We might have gotten out due to an error. Let's set this for
+	   the sake of internal consistency.*/
+	main_is_stopped = 1;
 
 	return retval;
 }
