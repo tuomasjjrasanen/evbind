@@ -38,27 +38,42 @@ extern char *program_invocation_short_name;
 
 static bool main_no_daemon = false;
 
-static struct udev *main_udev;
-
-static int main_init(struct evb_err *const err)
-{
-	int retval = -1;
-
-	main_udev = udev_new();
-	if (!main_udev) {
-		evb_err_set(err, EVB_ERR_NUM_UDEV, "%s",
-			    "udev_new returned NULL");
-		goto out;
-	}
-
-	retval = 0;
-out:
-	return retval;
-}
+static struct evb_err *main_err = NULL;
+static struct udev *main_udev = NULL;
 
 static void main_free()
 {
-	udev_unref(main_udev);
+	if (main_udev) {
+		udev_unref(main_udev);
+		main_udev = NULL;
+	}
+
+	if (main_err) {
+		evb_err_free(main_err);
+		main_udev = NULL;
+	}
+}
+
+static int main_init()
+{
+	main_err = evb_err_new();
+	if (!main_err) {
+		syslog(LOG_ERR, "evb_err_new() failed: %s",
+		       strerror(errno));
+		goto err;
+	}
+
+	main_udev = udev_new();
+	if (!main_udev) {
+		evb_err_set(main_err, EVB_ERR_NUM_UDEV, "%s",
+			    "udev_new returned NULL");
+		goto err;
+	}
+
+	return 0;
+err:
+	main_free();
+	return 1;
 }
 
 static void main_help_and_exit()
@@ -126,7 +141,7 @@ Options:\n\
         }
 }
 
-int main_daemonize(struct evb_err *const err)
+int main_daemonize()
 {
 	int fd_devnull;
 
@@ -134,7 +149,7 @@ int main_daemonize(struct evb_err *const err)
 	case 0:
 		break;
 	case -1:
-		evb_err_set(err, EVB_ERR_NUM_SYS, "failed to fork: %s",
+		evb_err_set(main_err, EVB_ERR_NUM_SYS, "failed to fork: %s",
 			    strerror(errno));
 		return -1;
 	default:
@@ -147,7 +162,7 @@ int main_daemonize(struct evb_err *const err)
 	case 0:
 		break;
 	case -1:
-		evb_err_set(err, EVB_ERR_NUM_SYS,
+		evb_err_set(main_err, EVB_ERR_NUM_SYS,
 			    "failed to double-fork: %s",
 			    strerror(errno));
 		return -1;
@@ -156,7 +171,7 @@ int main_daemonize(struct evb_err *const err)
 	}
 
 	if (chdir("/") == -1) {
-		evb_err_set(err, EVB_ERR_NUM_SYS,
+		evb_err_set(main_err, EVB_ERR_NUM_SYS,
 			    "failed to chdir to /: %s",
 			    strerror(errno));
 		return -1;
@@ -164,28 +179,28 @@ int main_daemonize(struct evb_err *const err)
 
 	fd_devnull = open("/dev/null", O_RDWR);
 	if (fd_devnull == -1) {
-		evb_err_set(err, EVB_ERR_NUM_SYS,
+		evb_err_set(main_err, EVB_ERR_NUM_SYS,
 			    "failed to open /dev/null: %s",
 			    strerror(errno));
 		return -1;
 	}
 
 	if (dup2(fd_devnull, 0) == -1) {
-		evb_err_set(err, EVB_ERR_NUM_SYS,
+		evb_err_set(main_err, EVB_ERR_NUM_SYS,
 			    "failed to redirect stdin to /dev/null: %s",
 			    strerror(errno));
 		return -1;
 	}
 
 	if (dup2(fd_devnull, 1) == -1) {
-		evb_err_set(err, EVB_ERR_NUM_SYS,
+		evb_err_set(main_err, EVB_ERR_NUM_SYS,
 			    "failed to redirect stdout to /dev/null: %s",
 			    strerror(errno));
 		return -1;
 	}
 
 	if (dup2(fd_devnull, 2) == -1) {
-		evb_err_set(err, EVB_ERR_NUM_SYS,
+		evb_err_set(main_err, EVB_ERR_NUM_SYS,
 			    "failed to redirect stderr to /dev/null: %s",
 			    strerror(errno));
 		return -1;
@@ -196,8 +211,7 @@ int main_daemonize(struct evb_err *const err)
 	return 0;
 }
 
-static char **main_get_evdevs(size_t *const len,
-			      struct evb_err *const err)
+static char **main_get_evdevs(size_t *const len)
 {
 	struct udev_enumerate *enumerate;
 	struct udev_list_entry *list_entry;
@@ -207,19 +221,19 @@ static char **main_get_evdevs(size_t *const len,
 
 	enumerate = udev_enumerate_new(main_udev);
 	if (!enumerate) {
-		evb_err_set(err, EVB_ERR_NUM_UDEV, "%s",
+		evb_err_set(main_err, EVB_ERR_NUM_UDEV, "%s",
 			    "udev_enumerate_new returned NULL");
 		goto out;
 	}
 
 	if (udev_enumerate_add_match_subsystem(enumerate, "input")) {
-		evb_err_set(err, EVB_ERR_NUM_UDEV, "%s",
+		evb_err_set(main_err, EVB_ERR_NUM_UDEV, "%s",
 			    "udev_enumerate_add_match_subsystem failed");
 		goto out;
 	}
 
 	if (udev_enumerate_scan_devices(enumerate)) {
-		evb_err_set(err, EVB_ERR_NUM_UDEV, "%s",
+		evb_err_set(main_err, EVB_ERR_NUM_UDEV, "%s",
 			    "udev_enumerate_scan_devices failed");
 		goto out;
 	}
@@ -236,7 +250,7 @@ static char **main_get_evdevs(size_t *const len,
 
 		dev = udev_device_new_from_syspath(main_udev, path);
 		if (!dev) {
-			evb_err_set(err, EVB_ERR_NUM_UDEV, "%s",
+			evb_err_set(main_err, EVB_ERR_NUM_UDEV, "%s",
 				    "failed to create udev device");
 			goto out;
 		}
@@ -247,7 +261,7 @@ static char **main_get_evdevs(size_t *const len,
 		devnodev_new = realloc(devnodev,
 				       sizeof(char *) * (devnodec + 1));
 		if (!devnodev_new) {
-			evb_err_set(err, EVB_ERR_NUM_SYS, "%s",
+			evb_err_set(main_err, EVB_ERR_NUM_SYS, "%s",
 				    "failed to allocate memory for devnodes");
 			udev_device_unref(dev);
 			goto out;
@@ -258,7 +272,7 @@ static char **main_get_evdevs(size_t *const len,
 		devnodev[devnodec] = malloc(sizeof(char) *
 					    (strlen(devnode) + 1));
 		if (!devnodev[devnodec]) {
-			evb_err_set(err, EVB_ERR_NUM_SYS, "%s",
+			evb_err_set(main_err, EVB_ERR_NUM_SYS, "%s",
 				    "failed to allocate memory for devnode");
 			udev_device_unref(dev);
 			goto out;
@@ -272,7 +286,7 @@ static char **main_get_evdevs(size_t *const len,
 
 	*len = devnodec;
 out:
-	if (devnodev && evb_err_num(err)) {
+	if (devnodev && evb_err_num(main_err)) {
 		for (size_t i = 0; i < devnodec; ++i) {
 			free(devnodev[i]);
 		}
@@ -286,13 +300,13 @@ out:
 	return devnodev;
 }
 
-static int main_loop(struct evb_err *const err)
+static int main_loop()
 {
 	int retval = -1;
 	char **evdevs;
 	size_t evdev_count;
 
-	evdevs = main_get_evdevs(&evdev_count, err);
+	evdevs = main_get_evdevs(&evdev_count);
 	if (!evdevs)
 		goto out;
 
@@ -311,37 +325,27 @@ out:
 int main(int argc, char **argv)
 {
 	int exitval = EXIT_FAILURE;
-	struct evb_err *err;
 
 	main_parse_args(argc, argv);
 
         openlog(program_invocation_short_name, LOG_ODELAY | LOG_PERROR,
 		LOG_DAEMON);
 
-	err = evb_err_new();
-	if (!err) {
-		syslog(LOG_ERR, "evb_err_new() failed: %s",
-		       strerror(errno));
-		return EXIT_FAILURE;
-	}
-
-	if (!main_no_daemon && main_daemonize(err) == -1)
+	if (!main_no_daemon && main_daemonize() == -1)
 		goto out;
 
-	if (main_init(err))
+	if (main_init())
 		goto out;
 
-	if (main_loop(err))
+	if (main_loop())
 		goto out;
 
 	exitval = EXIT_SUCCESS;
 out:
-	if (evb_err_num(err))
-		syslog(LOG_ERR, "%s", evb_err_str(err));
+	if (evb_err_num(main_err))
+		syslog(LOG_ERR, "%s", evb_err_str(main_err));
 
 	main_free();
-
-	evb_err_free(err);
 
         syslog(LOG_INFO, "%s", "terminated");
 
