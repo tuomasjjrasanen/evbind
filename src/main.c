@@ -14,7 +14,7 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
+#define _GNU_SOURCE
 #include <getopt.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -44,6 +44,7 @@ static struct udev_monitor *main_udev_mon = NULL;
 static int main_udev_mon_fd = -1;
 static fd_set main_evdev_fds;
 static int main_evdev_max_fd = -1;
+volatile sig_atomic_t main_is_stopped;
 
 static int max(int a, int b)
 {
@@ -376,11 +377,49 @@ static int main_loop()
 		free(evdevs[i]);
 	}
 
+	while (!main_is_stopped) {
+		pause();
+	}
+
 	retval = 0;
 out:
 	free(evdevs);
 
 	return retval;
+}
+
+static void main_sighandler(const int __attribute__ ((unused)) signum)
+{
+	main_is_stopped = 1;
+}
+
+static int main_set_sighandlers()
+{
+	struct sigaction sigact;
+	sigset_t sighandler_mask;
+
+	sigfillset(&sighandler_mask);
+
+	sigact.sa_handler = &main_sighandler;
+	sigact.sa_mask = sighandler_mask;
+	sigact.sa_flags = 0;
+
+	if (sigaction(SIGUSR1, &sigact, NULL))
+		return -1;
+
+	if (sigaction(SIGUSR2, &sigact, NULL))
+		return -1;
+
+	if (sigaction(SIGHUP, &sigact, NULL))
+		return -1;
+
+	if (sigaction(SIGINT, &sigact, NULL))
+		return -1;
+
+	if (sigaction(SIGTERM, &sigact, NULL))
+		return -1;
+
+	return 0;
 }
 
 int main(int argc, char **argv)
@@ -393,6 +432,9 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 
 	if (!main_no_daemon && main_daemonize())
+		goto out;
+
+	if (main_set_sighandlers())
 		goto out;
 
 	if (main_loop())
