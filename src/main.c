@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
+#include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -41,9 +42,24 @@ static struct evb_err *main_err = NULL;
 static struct udev *main_udev = NULL;
 static struct udev_monitor *main_udev_mon = NULL;
 static int main_udev_mon_fd = -1;
+static fd_set main_evdev_fds;
+static int main_evdev_max_fd = -1;
+
+static int max(int a, int b)
+{
+	return a > b ? a : b;
+}
 
 static void main_free()
 {
+	for (int fd = 0; fd <= main_evdev_max_fd; ++fd) {
+		if (FD_ISSET(fd, &main_evdev_fds)) {
+			close(fd);
+		}
+	}
+	FD_ZERO(&main_evdev_fds);
+	main_evdev_max_fd = -1;
+
 	main_udev_mon_fd = -1;
 
 	if (main_udev_mon) {
@@ -103,6 +119,8 @@ static int main_init()
 		       "got illegal udev monitor file descriptor");
 		goto err;
 	}
+
+	FD_ZERO(&main_evdev_fds);
 
 	return 0;
 err:
@@ -347,7 +365,14 @@ static int main_loop()
 		goto out;
 
 	for (size_t i = 0; i < evdev_count; ++i) {
-		syslog(LOG_INFO, "found: %s", evdevs[i]);
+		int fd = open(evdevs[i], O_RDONLY);
+		if (fd == -1) {
+			syslog(LOG_WARNING, "failed to open %s: %s",
+			       evdevs[i], strerror(errno));
+		} else {
+			FD_SET(fd, &main_evdev_fds);
+			main_evdev_max_fd = max(fd, main_evdev_max_fd);
+		}
 		free(evdevs[i]);
 	}
 
