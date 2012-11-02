@@ -274,12 +274,32 @@ out:
 	return devnodev;
 }
 
+static int evb_main_loop(struct evb_err *const err)
+{
+	int retval = -1;
+	char **evdevs;
+	size_t evdev_count;
+
+	evdevs = evb_main_get_evdevs(&evdev_count, err);
+	if (!evdevs)
+		goto out;
+
+	for (size_t i = 0; i < evdev_count; ++i) {
+		syslog(LOG_INFO, "found: %s", evdevs[i]);
+		free(evdevs[i]);
+	}
+
+	retval = 0;
+out:
+	free(evdevs);
+
+	return retval;
+}
+
 int main(int argc, char **argv)
 {
 	int exitval = EXIT_FAILURE;
 	struct evb_err *err;
-	char **evdevs;
-	size_t evdev_count;
 
 	evb_main_parse_args(argc, argv);
 
@@ -296,16 +316,8 @@ int main(int argc, char **argv)
 	if (!no_daemon && evb_main_daemonize(err) == -1)
 		goto out;
 
-	evdevs = evb_main_get_evdevs(&evdev_count, err);
-	if (!evdevs)
+	if (evb_main_loop(err))
 		goto out;
-
-	for (size_t i = 0; i < evdev_count; ++i) {
-		syslog(LOG_INFO, "found: %s", evdevs[i]);
-		free(evdevs[i]);
-	}
-
-	free(evdevs);
 
 	exitval = EXIT_SUCCESS;
 out:
