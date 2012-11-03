@@ -38,17 +38,17 @@
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
 
-static bool main_no_daemon = false;
+static bool main_no_daemon;
 
-static struct evb_err *main_err = NULL;
-static struct udev *main_udev = NULL;
-static struct udev_monitor *main_udev_mon = NULL;
+static struct evb_err *main_err;
+static struct udev *main_udev;
+static struct udev_monitor *main_udev_mon;
 static int main_udev_mon_fd = -1;
 static fd_set main_evdev_fds;
 static int main_evdev_max_fd = -1;
 volatile sig_atomic_t main_is_stopped;
 
-static int max(int a, int b)
+static int max(const int a, const int b)
 {
 	return a > b ? a : b;
 }
@@ -138,7 +138,7 @@ static void main_help_and_exit()
         exit(EXIT_FAILURE);
 }
 
-static void main_parse_args(int argc, char **argv)
+static void main_parse_args(const int argc, char **const argv)
 {
         const struct option options[] = {
                 {"no-daemon", no_argument, NULL, 'n'},
@@ -513,7 +513,7 @@ static int main_set_sighandlers()
 	return 0;
 }
 
-int main(int argc, char **argv)
+int main(const int argc, char **const argv)
 {
 	int exitval = EXIT_FAILURE;
 
